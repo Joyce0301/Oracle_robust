@@ -1,0 +1,20 @@
+# Hardhat
+node_modules
+.env
+coverage
+coverage.json
+typechain-types
+
+# Slither
+.slither.db.json
+
+# Foundry
+cache
+out
+broadcast
+
+# Next.js
+.next
+
+# Remix
+.remix.config.json

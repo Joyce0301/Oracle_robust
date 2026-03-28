@@ -8,7 +8,11 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "hardhat test test/LendingPool.cjs",
+    "scenario:flash": "hardhat run scenarios/flash_crash_liquidation.cjs",
+    "scenario:inflated": "hardhat run scenarios/inflated_oracle_borrow.cjs",
+    "scenario:mock": "hardhat run scenarios/mock_oracle_baseline.cjs",
+    "scenario:all": "hardhat run scenarios/run_all.cjs"
   },
   "repository": {
     "type": "git",

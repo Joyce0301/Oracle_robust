@@ -30,6 +30,17 @@ This project investigates the robustness of Decentralized Finance (DeFi) oracles
 - **Testing/Scripts**: Ethers.js, Chai
 - **Libraries**: OpenZeppelin
 
+## 🧪 Stress scenarios (Member B)
+
+```bash
+npx hardhat run scenarios/flash_crash_liquidation.cjs
+npx hardhat run scenarios/inflated_oracle_borrow.cjs
+npx hardhat run scenarios/mock_oracle_baseline.cjs
+npx hardhat run scenarios/run_all.cjs
+```
+
+Or: `npm run scenario:flash`, `scenario:inflated`, `scenario:mock`, `scenario:all`.
+
 ## 🛠️ Quick Start
 
 ### 1. Install Dependencies

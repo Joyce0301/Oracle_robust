@@ -1,6 +1,7 @@
 # Hardhat
 node_modules
 .env
+artifacts
 coverage
 coverage.json
 typechain-types
@@ -18,3 +19,8 @@ broadcast
 
 # Remix
 .remix.config.json
+
+# Local outputs
+output
+tmp
+deployments/*.json

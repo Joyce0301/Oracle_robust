@@ -19,6 +19,7 @@ This project investigates the robustness of Decentralized Finance (DeFi) oracles
 ├── scripts/            # Deployment and initialization scripts
 ├── test/               # Unit tests (Hardhat/Mocha)
 ├── scenarios/          # Adversarial and stress testing scripts
+├── deployments/        # Machine-readable deployment outputs for scripts
 ├── analysis/           # Results analysis and plotting
 └── docs/               # Architecture, metrics, and threat model documentation
 ```
@@ -48,15 +49,24 @@ npx hardhat test test/LendingPool.cjs
 ```
 
 ### 4. Deploy MVP Environment
-This script deploys mock tokens, oracles, and the lending pool, and initializes liquidity.
+For reusable scenario runs, start a local Hardhat node first, then deploy to `localhost`.
 ```bash
-npx hardhat run scripts/deploy_mvp.cjs
+npx hardhat node
+npx hardhat run scripts/deploy_mvp.cjs --network localhost
+```
+
+### 5. Run a Standardized Stress Scenario
+After deployment, scenario scripts load `deployments/mvp.localhost.json` and emit JSON logs for analysis.
+```bash
+npx hardhat run scenarios/run_price_shock.cjs --network localhost
 ```
 
 ## 📝 Developer Notes (Dylan)
 
 - **Interface Decoupling**: All oracles must implement the `IPriceOracle` interface.
 - **Stress Testing**: Member B can use `MockOracle.sol` to simulate data anomalies using `setPrice` and `setDelay`.
+- **Stable Oracle Baseline**: `TWAPOracle.sol` provides a smoother baseline than spot pricing, making oracle comparisons more meaningful.
+- **Scenario Integration**: Deployment addresses are written to `deployments/mvp.<network>.json`, and scenario scripts emit JSON logs so experiments are reproducible.
 - **Liquidation Logic**: The liquidation threshold (LTV) is currently set at 80% to observe how oracle price fluctuations affect protocol safety.
 
 ---

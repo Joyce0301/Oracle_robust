@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("LendingPool", function () {
   let lendingPool;
@@ -91,5 +92,47 @@ describe("LendingPool", function () {
 
     expect(await lendingPool.collateralBalances(user.address)).to.equal(0);
     expect(await lendingPool.debtBalances(user.address)).to.equal(0);
+  });
+});
+
+describe("TWAPOracle", function () {
+  let collateralToken;
+  let twapOracle;
+  let owner;
+
+  beforeEach(async function () {
+    [owner] = await ethers.getSigners();
+
+    const MockToken = await ethers.getContractFactory("MockToken");
+    collateralToken = await MockToken.deploy("Collateral", "COL");
+
+    const TWAPOracle = await ethers.getContractFactory("TWAPOracle");
+    twapOracle = await TWAPOracle.deploy(3600);
+  });
+
+  it("Should return the latest price when there is no older observation in the window", async function () {
+    const asset = await collateralToken.getAddress();
+    const initialPrice = ethers.parseEther("2000");
+
+    await twapOracle.pushPrice(asset, initialPrice);
+    await time.increase(300);
+
+    expect(await twapOracle.getPrice(asset)).to.equal(initialPrice);
+  });
+
+  it("Should smooth a sudden price move using a time-weighted average", async function () {
+    const asset = await collateralToken.getAddress();
+    const initialPrice = ethers.parseEther("2000");
+    const shockedPrice = ethers.parseEther("1000");
+
+    await twapOracle.pushPrice(asset, initialPrice);
+    await time.increase(1800);
+    await twapOracle.pushPrice(asset, shockedPrice);
+    await time.increase(1800);
+
+    expect(await twapOracle.getPrice(asset)).to.be.closeTo(
+      ethers.parseEther("1500"),
+      ethers.parseEther("1")
+    );
   });
 });

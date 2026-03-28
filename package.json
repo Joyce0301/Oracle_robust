@@ -8,7 +8,13 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "test:lending-pool": "npx hardhat test test/LendingPool.cjs",
+    "deploy:mvp": "npx hardhat run scripts/deploy_mvp.cjs",
+    "deploy:mvp:local": "npx hardhat run scripts/deploy_mvp.cjs --network localhost",
+    "scenario:price-shock": "npx hardhat run scenarios/run_price_shock.cjs",
+    "scenario:price-shock:local": "npx hardhat run scenarios/run_price_shock.cjs --network localhost"
   },
   "repository": {
     "type": "git",

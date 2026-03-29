@@ -7,6 +7,7 @@
  */
 const { ethers } = require("hardhat");
 const { POOL_LIQUIDITY } = require("./_fixture.cjs");
+const { logEvent } = require("./lib/logger.cjs");
 
 async function runMockOracleBaseline() {
   const [deployer, user] = await ethers.getSigners();
@@ -33,9 +34,12 @@ async function runMockOracleBaseline() {
   await debt.mint(await pool.getAddress(), POOL_LIQUIDITY);
 
   const p = await oracle.getPrice(cAddr);
+  const delay = await oracle.delayInSeconds();
   console.log("--- MockOracle baseline ---");
-  console.log(`getPrice(COL) = ${ethers.formatEther(p)} (delay=${(await oracle.delayInSeconds()).toString()}s, not enforced in getPrice yet)`);
+  console.log(`getPrice(COL) = ${ethers.formatEther(p)} (delay=${delay.toString()}s, not enforced in getPrice yet)`);
   console.log("Next step for scenarios: implement stale-price behavior in MockOracle.getPrice, then replay flash_crash with delayed updates.");
+
+  logEvent("mock_oracle_baseline", { collateralPrice: p, delaySeconds: delay, delayEnforced: false });
 }
 
 async function main() {

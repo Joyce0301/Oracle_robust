@@ -5,6 +5,7 @@
  */
 const { ethers } = require("hardhat");
 const { deployStressFixture, formatUsdFrom18 } = require("./_fixture.cjs");
+const { logEvent } = require("./lib/logger.cjs");
 
 async function runFlashCrashLiquidation() {
   const { user, liquidator, collateral, debt, oracle, pool, collateralAddr } =
@@ -26,10 +27,19 @@ async function runFlashCrashLiquidation() {
   console.log(`User: deposited ${ethers.formatEther(depositAmt)} COL, borrowed ${ethers.formatEther(borrowAmt)} DEBT`);
   console.log("LTV before crash: debt 1500 / collateral 2000 = 75% (< 80% healthy)");
 
+  logEvent("position_opened", {
+    scenario: "flash_crash_liquidation",
+    collateralDeposited: depositAmt,
+    debtBorrowed: borrowAmt,
+    ltvPercent: "75",
+  });
+
   const newColPrice = ethers.parseEther("1800");
   await oracle.setPrice(collateralAddr, newColPrice);
   console.log(`Oracle update: 1 COL = ${formatUsdFrom18(newColPrice)} USD`);
   console.log("LTV after crash: 1500 / 1800 ≈ 83.3% (> 80% unhealthy)");
+
+  logEvent("oracle_shocked", { collateralPrice: newColPrice, newLtvPercent: "83.3" });
 
   const liqDebtBefore = await debt.balanceOf(liquidator.address);
   const liqColBefore = await collateral.balanceOf(liquidator.address);
@@ -52,6 +62,8 @@ async function runFlashCrashLiquidation() {
   console.log(
     "Failure criterion (example): borrower lost entire collateral; protocol relies on single spot oracle for health + liquidation."
   );
+
+  logEvent("position_liquidated", { debtPaid, collateralReceived: colReceived, liquidatorPnlUsd: Number(formatUsdFrom18(newColPrice)) * Number(ethers.formatEther(colReceived)) - Number(formatUsdFrom18(borrowAmt)) });
 }
 
 async function main() {

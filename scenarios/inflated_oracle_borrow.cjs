@@ -6,6 +6,7 @@
  */
 const { ethers } = require("hardhat");
 const { deployStressFixture, formatUsdFrom18 } = require("./_fixture.cjs");
+const { logEvent } = require("./lib/logger.cjs");
 
 async function runInflatedOracleBorrow() {
   const { user, liquidator, collateral, debt, oracle, pool, collateralAddr, debtAddr } =
@@ -33,6 +34,13 @@ async function runInflatedOracleBorrow() {
     `User borrowed ${ethers.formatEther(maxBorrowAtInflated)} DEBT (80% of inflated collateral value 10000 USD)`
   );
 
+  logEvent("position_opened", {
+    scenario: "inflated_oracle_borrow",
+    inflatedPrice,
+    collateralDeposited: depositAmt,
+    debtBorrowed: maxBorrowAtInflated,
+  });
+
   await oracle.setPrice(collateralAddr, marketPrice);
   const debtP = await oracle.getPrice(debtAddr);
   const colP = await oracle.getPrice(collateralAddr);
@@ -43,6 +51,8 @@ async function runInflatedOracleBorrow() {
   console.log(`Notional debt value: ${formatUsdFrom18(debtVal)} USD`);
   console.log(`Notional collateral value: ${formatUsdFrom18(colVal)} USD`);
   console.log(`80% of collateral: ${formatUsdFrom18(threshold)} USD — position unhealthy: ${debtVal > threshold}`);
+
+  logEvent("oracle_corrected", { correctedPrice: marketPrice, debtValueUsd: debtVal, collateralValueUsd: colVal, positionUnhealthy: debtVal > threshold });
 
   const liqDebtBefore = await debt.balanceOf(liquidator.address);
   const liqColBefore = await collateral.balanceOf(liquidator.address);
@@ -63,6 +73,8 @@ async function runInflatedOracleBorrow() {
   console.log(
     "Failure criterion (example): borrowers could extract excess debt under wrong prices; liquidators may take large notional loss under this simplified full-seize rule."
   );
+
+  logEvent("position_liquidated", { debtPaid, collateralReceived: colReceived, liquidatorPnlUsd: formatUsdFrom18(pnl) });
 }
 
 async function main() {

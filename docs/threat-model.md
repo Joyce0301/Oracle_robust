@@ -2,16 +2,17 @@
 
 > Owner: **Member A (Architecture)** + **Member B (Security & Stress Testing)**
 >
-> Last updated: 2026-03-28
+> Last updated: 2026-03-29
 
 ## 1. System Boundaries
 
 ```
-┌──────────────┐      getPrice()       ┌──────────────┐
-│  LendingPool │ ◄──────────────────── │  IPriceOracle │
-│  (protocol)  │                       │  (SpotOracle  │
-│              │                       │   / MockOracle)│
-└──────┬───────┘                       └───────────────┘
+┌──────────────┐      getPrice()       ┌─────────────────┐
+│  LendingPool │ ◄──────────────────── │  IPriceOracle    │
+│  (protocol)  │                       │  - SpotOracle    │
+│              │                       │  - TWAPOracle    │
+│              │                       │  - MockOracle    │
+└──────┬───────┘                       └─────────────────┘
        │
        │ deposit / borrow / repay / liquidate
        │
@@ -24,8 +25,9 @@
 
 | Component | Trust Level | Notes |
 |-----------|------------|-------|
-| Oracle price | **Fully trusted** | Protocol does not validate, cap, or smooth prices |
-| Oracle admin (owner) | **Trusted** | Single EOA can set any price at any time |
+| Oracle price (SpotOracle) | **Fully trusted** | Protocol does not validate, cap, or smooth prices |
+| Oracle price (TWAPOracle) | **Partially smoothed** | Time-weighted average over configurable window; resists instant manipulation but still trusts admin pushes |
+| Oracle admin (owner) | **Trusted** | Single EOA can set/push any price at any time |
 | LendingPool owner | Trusted | Can swap oracle via `setPriceOracle` |
 | ERC-20 tokens | Trusted | MockToken has no access control on `mint` |
 
@@ -95,14 +97,23 @@ These are the conditions under which we consider the oracle / protocol combinati
 | `flash_crash_liquidation` | T1 (low price) | F2 (borderline), observations on full-seize rule |
 | `inflated_oracle_borrow` | T1 (high price) | F1, F3, F5 |
 | `mock_oracle_baseline` | T2 (setup only) | — (baseline, delay not enforced) |
+| `twap_flash_crash_comparison` | T1 (low price) + TWAP mitigation | Compares F2 under Spot vs TWAP; TWAP delays/prevents liquidation |
+| `twap_inflated_price` | T1 (high price) + TWAP mitigation | Compares F1, F3 under Spot vs TWAP; TWAP reduces excess borrow |
 
 ## 5. Mitigations (Not Implemented — For Discussion)
 
-| Mitigation | Addresses | Complexity |
-|------------|-----------|------------|
-| TWAP (Time-Weighted Average Price) | T1, T4 | Medium |
-| Multi-oracle median | T1, T2 | Medium |
-| Price deviation circuit breaker | T1 | Low |
-| Freshness check (`require` on timestamp) | T2 | Low |
-| Partial liquidation (instead of full seize) | T1 economic impact | Medium |
-| Liquidation grace period / delay | T4 | Low |
+| Mitigation | Addresses | Complexity | Status |
+|------------|-----------|------------|--------|
+| TWAP (Time-Weighted Average Price) | T1, T4 | Medium | **Implemented** (`TWAPOracle.sol`); tested in `twap_flash_crash_comparison` and `twap_inflated_price` |
+| Multi-oracle median | T1, T2 | Medium | Not implemented |
+| Price deviation circuit breaker | T1 | Low | Not implemented |
+| Freshness check (`require` on timestamp) | T2 | Low | Not implemented |
+| Partial liquidation (instead of full seize) | T1 economic impact | Medium | Not implemented |
+| Liquidation grace period / delay | T4 | Low | Not implemented |
+
+### TWAP Effectiveness (Empirical Observations)
+
+Based on scenarios 3.4 and 3.5:
+
+- **Flash crash (T1 low price)**: TWAP delays liquidation by smoothing the price drop. Under a 30-min window, a 10 % crash (2 000 → 1 800) initially shows ~1 900 on TWAP, keeping LTV below 80 %. Borrowers gain a buffer window to react. Trade-off: genuinely unhealthy positions also take longer to liquidate.
+- **Price inflation (T1 high price)**: TWAP limits the immediate exploitable borrow to roughly half of what SpotOracle allows (blended price ~6 000 vs instant 10 000). Protocol exposure is reduced but not eliminated — if the inflated price persists, TWAP eventually converges to it.

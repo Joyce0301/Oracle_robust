@@ -2,7 +2,7 @@
 
 > Owner: **Member B (Security & Stress Testing)**
 >
-> Last updated: 2026-03-28
+> Last updated: 2026-03-29
 
 ## 1. Purpose
 
@@ -15,6 +15,7 @@ This document describes the adversarial and stress scenarios implemented in the 
 | Collateral Token | `MockToken("Collateral", "COL")` | ERC-20, freely mintable |
 | Debt Token | `MockToken("Debt", "DEBT")` | ERC-20, freely mintable |
 | Oracle (default) | `SpotOracle` | Admin-set prices via `setPrice()` |
+| Oracle (TWAP) | `TWAPOracle` | Time-weighted average over configurable window (default 30 min) |
 | Oracle (stress) | `MockOracle` | Adds `lastUpdateTime` / `delayInSeconds` (delay not yet enforced) |
 | Lending Pool | `LendingPool` | 80 % LTV liquidation threshold |
 | Pool Liquidity | 1,000,000 DEBT pre-minted | Ensures large borrows don't fail on balance |
@@ -106,6 +107,68 @@ Shared setup is in `scenarios/_fixture.cjs`. Initial prices:
 
 ---
 
+### 3.4 TWAP Flash Crash Comparison (SpotOracle vs TWAPOracle)
+
+| Field | Value |
+|-------|-------|
+| File | `scenarios/twap_flash_crash_comparison.cjs` |
+| Run | `npx hardhat run scenarios/twap_flash_crash_comparison.cjs` |
+
+**Narrative**: Two LendingPools are deployed with identical parameters — one uses `SpotOracle`, the other `TWAPOracle` (30-min window). A user opens the same position (deposit 1 COL, borrow 1 500 DEBT) in both pools. Collateral price crashes from 2 000 → 1 800 USD. The scenario compares liquidation behavior across the two oracle types.
+
+**Steps**:
+
+1. Deploy tokens, SpotOracle, TWAPOracle (window = 1 800 s), and two LendingPools.
+2. Let TWAP accumulate history at 2 000 USD for a full window.
+3. Open identical positions in both pools (1 COL deposit, 1 500 DEBT borrow).
+4. Crash price to 1 800 USD on both oracles simultaneously.
+5. Attempt liquidation on both pools immediately.
+6. For TWAP pool: if liquidation fails, advance time in increments and retry until TWAP catches up.
+
+**Expected output**:
+
+| Metric | SpotOracle Pool | TWAPOracle Pool |
+|--------|----------------|-----------------|
+| Oracle price after crash | 1 800 USD | ~1 900 USD (smoothed) |
+| LTV after crash | ≈ 83.3 % | ≈ 78.9 % |
+| Immediate liquidation | Succeeds | Fails (position healthy) |
+| Liquidation delay | 0 s | Several minutes (TWAP catch-up) |
+
+**Failure criteria observed**: SpotOracle triggers instant liquidation with no buffer. TWAPOracle gives borrowers a time window to react (add collateral or repay), reducing unfair liquidations under transient price dips.
+
+---
+
+### 3.5 TWAP Inflated Price Comparison (Manipulation Resistance)
+
+| Field | Value |
+|-------|-------|
+| File | `scenarios/twap_inflated_price.cjs` |
+| Run | `npx hardhat run scenarios/twap_inflated_price.cjs` |
+
+**Narrative**: An attacker pushes a single inflated price (10 000 USD, 5× real) to both oracles. Under SpotOracle, the attacker borrows 8 000 DEBT (80 % of fake 10 000 value). Under TWAPOracle, `getPrice()` returns a blend of old price (2 000) and new price (10 000), limiting the borrowable amount.
+
+**Steps**:
+
+1. Deploy tokens, SpotOracle, TWAPOracle, two LendingPools.
+2. TWAP accumulates 30 min of history at 2 000 USD.
+3. Push inflated price 10 000 to both oracles.
+4. SpotOracle pool: user borrows 8 000 DEBT (should succeed).
+5. TWAPOracle pool: user attempts 8 000 DEBT borrow (should fail); retry at TWAP-allowed max.
+6. Log comparison of borrowable amounts and protocol exposure.
+
+**Expected output**:
+
+| Metric | SpotOracle Pool | TWAPOracle Pool |
+|--------|----------------|-----------------|
+| Oracle price after manipulation | 10 000 USD | ~6 000 USD (blended) |
+| Max borrowable (80 % LTV) | 8 000 DEBT | ~4 800 DEBT |
+| Excess debt over real value | $6 400 | ~$3 200 |
+| Manipulation damage reduction | — | ~50 % |
+
+**Failure criteria observed**: SpotOracle allows full extraction of inflated value. TWAPOracle reduces exploitable borrow by roughly half, but still allows some excess borrowing if the inflated price persists.
+
+---
+
 ## 4. How to Run
 
 ```bash
@@ -113,6 +176,8 @@ Shared setup is in `scenarios/_fixture.cjs`. Initial prices:
 npx hardhat run scenarios/flash_crash_liquidation.cjs
 npx hardhat run scenarios/inflated_oracle_borrow.cjs
 npx hardhat run scenarios/mock_oracle_baseline.cjs
+npx hardhat run scenarios/twap_flash_crash_comparison.cjs
+npx hardhat run scenarios/twap_inflated_price.cjs
 
 # All at once
 npx hardhat run scenarios/run_all.cjs
@@ -121,6 +186,8 @@ npx hardhat run scenarios/run_all.cjs
 npm run scenario:flash
 npm run scenario:inflated
 npm run scenario:mock
+npm run scenario:twap-compare
+npm run scenario:twap-inflated
 npm run scenario:all
 ```
 
@@ -134,6 +201,7 @@ All scenarios run on the Hardhat built-in local chain; no external network or fu
 | Multi-step price ladder | Price drops in 5 % increments; observe at which step liquidation becomes profitable | — |
 | Oracle swap mid-position | Owner calls `setPriceOracle()` to switch oracle source while positions are open; new oracle has different price | — |
 | Front-running liquidation | Liquidator observes pending `setPrice` tx and front-runs `liquidate` in the same block | Hardhat `evm_mine` / block manipulation |
+| TWAP window sensitivity | Replay flash crash with different TWAP windows (5 min, 30 min, 2 hr) to find optimal trade-off | — |
 
 ## 6. Metrics to Collect (for Member C)
 

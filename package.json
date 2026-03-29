@@ -8,11 +8,19 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "hardhat test test/LendingPool.cjs",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "test:lending-pool": "npx hardhat test test/LendingPool.cjs",
+    "deploy:mvp": "npx hardhat run scripts/deploy_mvp.cjs",
+    "deploy:mvp:local": "npx hardhat run scripts/deploy_mvp.cjs --network localhost",
     "scenario:flash": "hardhat run scenarios/flash_crash_liquidation.cjs",
     "scenario:inflated": "hardhat run scenarios/inflated_oracle_borrow.cjs",
     "scenario:mock": "hardhat run scenarios/mock_oracle_baseline.cjs",
-    "scenario:all": "hardhat run scenarios/run_all.cjs"
+    "scenario:all": "hardhat run scenarios/run_all.cjs",
+    "scenario:price-shock": "npx hardhat run scenarios/run_price_shock.cjs",
+    "scenario:price-shock:local": "npx hardhat run scenarios/run_price_shock.cjs --network localhost",
+    "scenario:twap-compare": "hardhat run scenarios/twap_flash_crash_comparison.cjs",
+    "scenario:twap-inflated": "hardhat run scenarios/twap_inflated_price.cjs"
   },
   "repository": {
     "type": "git",

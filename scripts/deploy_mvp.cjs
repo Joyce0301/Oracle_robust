@@ -1,4 +1,7 @@
 const { ethers } = require("hardhat");
+const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
   console.log("Starting MVP deployment...");
@@ -23,22 +26,31 @@ async function main() {
   // 2. 部署预言机
   console.log("Deploying SpotOracle...");
   const SpotOracle = await ethers.getContractFactory("SpotOracle");
-  const oracle = await SpotOracle.deploy();
-  await oracle.waitForDeployment();
-  const oracleAddr = await oracle.getAddress();
-  console.log(`SpotOracle deployed to: ${oracleAddr}`);
+  const spotOracle = await SpotOracle.deploy();
+  await spotOracle.waitForDeployment();
+  const spotOracleAddr = await spotOracle.getAddress();
+  console.log(`SpotOracle deployed to: ${spotOracleAddr}`);
+
+  console.log("Deploying TWAPOracle...");
+  const TWAPOracle = await ethers.getContractFactory("TWAPOracle");
+  const twapOracle = await TWAPOracle.deploy(60 * 30);
+  await twapOracle.waitForDeployment();
+  const twapOracleAddr = await twapOracle.getAddress();
+  console.log(`TWAPOracle deployed to: ${twapOracleAddr}`);
 
   // 3. 初始化价格
   const initialCollateralPrice = ethers.parseEther("2000"); // 1 COL = 2000 USD
   const initialDebtPrice = ethers.parseEther("1"); // 1 DEBT = 1 USD
-  await oracle.setPrice(collateralAddr, initialCollateralPrice);
-  await oracle.setPrice(debtAddr, initialDebtPrice);
-  console.log("Initial prices set in oracle.");
+  await spotOracle.setPrice(collateralAddr, initialCollateralPrice);
+  await spotOracle.setPrice(debtAddr, initialDebtPrice);
+  await twapOracle.pushPrice(collateralAddr, initialCollateralPrice);
+  await twapOracle.pushPrice(debtAddr, initialDebtPrice);
+  console.log("Initial prices set in spot and TWAP oracles.");
 
   // 4. 部署借贷池
   console.log("Deploying LendingPool...");
   const LendingPool = await ethers.getContractFactory("LendingPool");
-  const lendingPool = await LendingPool.deploy(collateralAddr, debtAddr, oracleAddr);
+  const lendingPool = await LendingPool.deploy(collateralAddr, debtAddr, spotOracleAddr);
   await lendingPool.waitForDeployment();
   const poolAddr = await lendingPool.getAddress();
   console.log(`LendingPool deployed to: ${poolAddr}`);
@@ -52,8 +64,30 @@ async function main() {
   console.log("-----------------------------------");
   console.log(`COLLATERAL_TOKEN=${collateralAddr}`);
   console.log(`DEBT_TOKEN=${debtAddr}`);
-  console.log(`PRICE_ORACLE=${oracleAddr}`);
+  console.log(`SPOT_ORACLE=${spotOracleAddr}`);
+  console.log(`TWAP_ORACLE=${twapOracleAddr}`);
   console.log(`LENDING_POOL=${poolAddr}`);
+
+  const deploymentDir = path.join(__dirname, "..", "deployments");
+  const deploymentFile = path.join(deploymentDir, `mvp.${hre.network.name}.json`);
+  fs.mkdirSync(deploymentDir, { recursive: true });
+  fs.writeFileSync(
+    deploymentFile,
+    JSON.stringify(
+      {
+        network: hre.network.name,
+        deployer: deployer.address,
+        collateralToken: collateralAddr,
+        debtToken: debtAddr,
+        spotOracle: spotOracleAddr,
+        twapOracle: twapOracleAddr,
+        lendingPool: poolAddr,
+      },
+      null,
+      2
+    )
+  );
+  console.log(`Deployment file written to: ${deploymentFile}`);
 }
 
 main()

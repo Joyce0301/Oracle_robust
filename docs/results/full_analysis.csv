@@ -1,5 +1,6 @@
 scenario,realPrice,spotPrice,twapPrice,liquidatorPnl,delaySeconds,badDebt,price_error_spot_pct,price_error_twap_pct
-flash_crash,1800.0,1800.0,2000.0,300.0,0.0,0.0,0.0,11.11111111111111
-price_manipulation,2000.0,10000.0,2000.0,-6000.0,0.0,6400.0,400.0,0.0
-twap_baseline,2000.0,2000.0,2000.0,0.0,3600.0,0.0,0.0,0.0
-twap_delayed_liquidation,1800.0,1800.0,1800.0,0.0,900.0,0.0,0.0,0.0
+flash_crash_liquidation,1800.0,1800.0,,300.0,0.0,0.0,0.0,
+inflated_oracle_borrow,2000.0,10000.0,,-6000.0,0.0,6000.0,400.0,
+mock_oracle_baseline,2000.0,2000.0,,0.0,3600.0,0.0,0.0,
+twap_flash_crash_comparison,1800.0,1800.0,2000.0,0.0,900.0,0.0,0.0,11.11111111111111
+twap_inflated_price,2000.0,10000.0,2000.0,0.0,0.0,6400.0,400.0,0.0

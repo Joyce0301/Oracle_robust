@@ -1,18 +1,23 @@
-import os
+from pathlib import Path
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from metrics import load_jsonl, compute_all_metrics, build_summary
 
 def main():
+    analysis_dir = Path(__file__).resolve().parent
+    raw_results_path = analysis_dir / "raw_results.jsonl"
+    results_dir = analysis_dir.parent / "docs" / "results"
+
     print("🔄 Loading log...")
-    df_raw = load_jsonl("raw_results.jsonl")
+    df_raw = load_jsonl(str(raw_results_path))
     df = compute_all_metrics(df_raw)
 
-    os.makedirs("../docs/results", exist_ok=True)
-    df.to_csv("../docs/results/full_analysis.csv", index=False)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    df.to_csv(results_dir / "full_analysis.csv", index=False)
 
     summary = build_summary(df)
-    summary.to_csv("../docs/results/summary_metrics.csv")
+    summary.to_csv(results_dir / "summary_metrics.csv")
 
     print("\n📊 Final Results:\n")
     print(df.round(2))
@@ -27,7 +32,7 @@ def main():
     plt.ylabel("Error %")
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig("../docs/results/price_error.png")
+    plt.savefig(results_dir / "price_error.png")
     print("✅ price_error.png")
 
     # ----------------------
@@ -43,7 +48,7 @@ def main():
         plt.ylabel("USD")
         plt.grid(alpha=0.3)
         plt.tight_layout()
-        plt.savefig("../docs/results/liquidation_pnl.png")
+        plt.savefig(results_dir / "liquidation_pnl.png")
         print("✅ liquidation_pnl.png")
 
     # ----------------------
@@ -57,7 +62,7 @@ def main():
         plt.ylabel("Seconds")
         plt.grid(alpha=0.3)
         plt.tight_layout()
-        plt.savefig("../docs/results/twap_delay.png")
+        plt.savefig(results_dir / "twap_delay.png")
         print("✅ twap_delay.png")
 
     # ----------------------
@@ -71,7 +76,7 @@ def main():
         plt.ylabel("USD")
         plt.grid(alpha=0.3)
         plt.tight_layout()
-        plt.savefig("../docs/results/bad_debt.png")
+        plt.savefig(results_dir / "bad_debt.png")
         print("✅ bad_debt.png")
 
     print("\n🎉 ALL DONE — 4 charts completed!")

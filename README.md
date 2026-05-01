@@ -4,10 +4,10 @@ This project investigates the robustness of Decentralized Finance (DeFi) oracles
 
 ## 👥 Team & Roles
 
-- **Dylan (Implementation / Tooling Lead)**: Owner of contracts, oracles, and the MVP prototype. Responsible for implementation, deployment scripts, and tooling.
-- **Member A (Architecture / Spec Owner)**: Responsible for threat modeling, oracle interface specifications, and system assumptions/invariants.
-- **Member B (Security & Stress Testing)**: Responsible for designing attack/stress scenarios and writing `scenarios/` scripts.
-- **Member C (Analysis + Writing)**: Responsible for defining metrics, running experiments, and documenting results/discussions.
+- **YUANXI SHI(DYLAN) 59325882(Implementation / Tooling Lead)**: Owner of contracts, oracles, and the MVP prototype. Responsible for implementation, deployment scripts, and tooling.
+- **Wenyi Xu 59332326 (Architecture / Spec Owner)**: Responsible for threat modeling, oracle interface specifications, and system assumptions/invariants.
+- **Wendi Li 59785886 (Security & Stress Testing)**: Responsible for designing attack/stress scenarios and writing `scenarios/` scripts.
+- **ZHANG Rui 59851280 (Analysis + Writing)**: Responsible for defining metrics, running experiments, and documenting results/discussions.
 
 ## 🏗️ Project Structure
 
